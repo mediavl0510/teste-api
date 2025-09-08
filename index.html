@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-title" content="Ouvido Anônimo" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Ouvido Anônimo</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#121212" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+  <style>
+    /* ===== Design Tokens ===== */
+    :root {
+      --bg: #0f0f11;
+      --panel: #17171a;
+      --panel-2: #222226;
+      --ink: #f7f7fb;
+      --muted: #b9b9c6;
+      --brand: #7337CA;
+      --brand-2: #9B5CFF;
+      --ok: #2bd274;
+      --warn: #ffb02e;
+      --danger: #ff5b5b;
+      --radius: 16px;
+      --space: 16px;
+      --shadow-1: 0 6px 18px rgba(0,0,0,.35);
+      --shadow-2: 0 12px 30px rgba(0,0,0,.45);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --nav-h: 80px; /* fallback, JS ajusta */
+    }
+    @media (prefers-color-scheme: light) {
+      :root{ --bg:#f6f6fb; --panel:#ffffff; --panel-2:#f1edff; --ink:#16161a; --muted:#5f6271; }
+    }
+
+    /* ===== Base ===== */
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font: 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      overflow:hidden; height:100dvh; touch-action:manipulation;
+    }
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    a,button{outline:none}
+    :focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--brand); border-radius:12px}
+
+    .app{min-height:100dvh;height:100dvh;display:flex;flex-direction:column}
+
+    header{
+      position:sticky;top:0;z-index:100;background:var(--panel);
+      padding: calc(12px + var(--safe-top)) var(--space) 12px;
+      text-align:center; box-shadow:0 3px 10px rgba(115,55,202,.22);
+    }
+    header .title{font-weight:800;letter-spacing:.2px}
+    header .actions{position:absolute;inset:calc(10px + var(--safe-top)) var(--space) auto auto;display:flex;gap:8px}
+    .icon-btn{border:1px solid rgba(255,255,255,.08);background:var(--panel-2);color:var(--ink);border-radius:12px;padding:8px;cursor:pointer}
+
+    main{flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch; padding-bottom:calc(var(--nav-h))}
+
+    section{display:none;background:var(--panel);border-radius:var(--radius); box-shadow:var(--shadow-1);
+      max-width:980px;margin:16px auto 28px;padding:24px 16px}
+    section.active{display:block}
+
+    textarea,input,select{width:100%;padding:14px 16px;margin:10px 0 20px;border-radius:12px;border:none;font-size:16px;background:var(--panel-2);color:inherit}
+    textarea::placeholder{color:var(--muted)}
+    textarea:focus,input:focus,select:focus{box-shadow:0 0 0 2px rgba(115,55,202,.35)}
+
+    button{background:var(--brand);color:#fff;padding:12px 20px;border:none;border-radius:999px;font-weight:700;cursor:pointer;box-shadow:0 10px 28px rgba(115,55,202,.45)}
+    button:hover{filter:brightness(1.05)}
+    button:active{transform:translateY(1px)}
+
+    /* ===== Bottom Nav ===== */
+    .bottom-nav{position:fixed;left:0;right:0;bottom:0;height:var(--nav-h);display:grid;place-items:end center;pointer-events:none;z-index:200}
+    .bottom-nav::before{content:"";position:fixed;left:10px;right:10px;bottom:calc(4px + var(--safe-bottom));height:62px;border-radius:18px;background:radial-gradient(160% 120% at 50% 120%, rgba(115,55,202,.18) 0%, rgba(115,55,202,.06) 55%, transparent 100%);filter:blur(8px);z-index:-1}
+    .tray{pointer-events:auto;width:min(980px,100%);margin:0 auto max(6px,var(--safe-bottom));padding:8px 12px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .tab-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:56px;border-radius:16px;background:#171717;color:#cfcfcf;border:1px solid #242424;box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.45)}
+    .tab-pill span{font-size:11px;letter-spacing:.2px}
+    .tab-pill.active{color:#fff;background:linear-gradient(180deg, rgba(115,55,202,.9) 0%, rgba(76,35,139,.9) 60%, rgba(30,16,60,.95) 100%);border-color:#3b2a65;box-shadow:0 16px 36px rgba(115,55,202,.45),0 0 0 1px rgba(167,132,255,.35) inset,0 1px 0 rgba(255,255,255,.08) inset}
+
+    /* ===== HOME ===== */
+    #home{background:linear-gradient(180deg,#1a1a1a,#171717)}
+    .home-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:center;background:#1e1a27;border:1px solid rgba(183,154,255,.15);border-radius:16px;padding:16px;box-shadow:var(--shadow-2)}
+    .home-hero h1{margin:0 0 6px;font-size:22px}
+    .streak-text{margin:2px 0 10px;color:#d9ccff}
+    .frase{color:#bcb3df;margin:0 0 12px}
+    .home-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:10px 14px;border-radius:999px;border:1px solid rgba(183,154,255,.25);background:rgba(183,154,255,.08);color:inherit}
+
+    .ring-wrap{position:relative;width:160px;height:160px;display:grid;place-items:center}
+    .ring{width:120px;height:120px;transform:rotate(-90deg)}
+    .ring .bg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:12}
+    .ring .fg{fill:none;stroke:url(#gradRing);stroke-width:12;stroke-linecap:round;stroke-dasharray:327;stroke-dashoffset:327;filter:drop-shadow(0 6px 16px rgba(115,55,202,.45))}
+    .ring-center{position:absolute;display:grid;place-items:center}
+    .ring-number{font-weight:800;font-size:24px}
+
+    .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    .card{background:#1e1a27;border:1px solid rgba(183,154,255,.15);border-radius:16px;padding:16px;box-shadow:var(--shadow-2)}
+    .card h3{margin:0 0 10px;color:#d9ccff}
+    .todo{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+    .todo input[type="checkbox"]{transform:translateY(1px);margin-right:8px;accent-color:#9B5CFF}
+
+    /* ===== Progresso (contador em faixas reativas) ===== */
+    .oa-container{background:#141418;padding:20px;border-radius:20px;max-width:520px;width:100%;box-shadow:var(--shadow-2);margin:0 auto}
+    .oa-container h2{text-align:center;margin:0 0 8px;color:#b78dff}
+    .oa-slice{display:flex;align-items:center;gap:10px;font-size:18px;margin:12px 0;padding:16px 20px;border-radius:12px 40px 40px 12px;background:linear-gradient(90deg,#333,#333);box-shadow:0 6px 16px rgba(0,0,0,.3)}
+    .oa-slice .value{font-weight:800;font-size:22px;min-width:40px;text-align:right}
+    .oa-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+    .oa-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);font-weight:600}
+    .oa-btn.primary{flex:1;justify-content:center;background:linear-gradient(90deg,var(--brand-2),var(--brand));border:none}
+
+    /* ===== Achievements ===== */
+    .badges{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+    .badge{border:1px dashed rgba(255,255,255,.15);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    .badge.on{border-style:solid;color:#fff;box-shadow:0 6px 16px rgba(115,55,202,.35);background:linear-gradient(90deg,rgba(155,92,255,.25),rgba(115,55,202,.25))}
+
+    /* ===== E-books ===== */
+    .ebook-item{background:#2d2d2d;padding:20px;border-radius:12px;margin-bottom:20px}
+
+    /* ===== Toast ===== */
+    .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 12px + var(--safe-bottom));transform:translateX(-50%) translateY(20px);background:#101016;color:#fff;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:300}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    @media (max-width: 720px){.home-hero{grid-template-columns:1fr}.home-grid{grid-template-columns:1fr}}
+    @media (max-width:390px){.home-hero{padding:12px}.chip{padding:8px 12px;font-size:14px}.ring-wrap{width:140px;height:140px}.ring{width:108px;height:108px}.card{padding:12px}}
+
+    @media (prefers-reduced-motion: reduce){
+      *{animation:none!important;transition:none!important}
+    }
+  
+/* === iOS safe area & height adjustments === */
+html, body {
+  height: 100%;
+}
+body {
+  min-height: 100vh;
+  height: 100svh;
+  height: -webkit-fill-available;
+}
+.app {
+  min-height: 100svh;
+  height: 100svh;
+  height: -webkit-fill-available;
+}
+main {
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom));
+}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Ouvido Anônimo</div>
+      <div class="actions">
+        <button id="themeToggle" class="icon-btn" aria-pressed="false" title="Alternar tema">🌓</button>
+        <button id="installBtn" class="icon-btn" hidden title="Instalar app">⬇️</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- HOME -->
+      <section id="home" class="active" aria-labelledby="home-title">
+        <h2 id="home-title" class="sr-only">Início</h2>
+        <div class="home-hero">
+          <div class="hero-left">
+            <h1 id="home-saudacao">Bem-vindo 👋</h1>
+            <p class="streak-text"><strong id="home-streak-dias">0</strong> dias sem recaída</p>
+            <p id="home-frase" class="frase"></p>
+            <div class="home-actions">
+              <button class="chip" data-goto="comunidade">Comunidade</button>
+              <button class="chip" data-goto="preciso-conversar">Conversar</button>
+              <button class="chip" data-goto="como-me-senti">Como me senti</button>
+              <button class="chip" data-goto="meu-progresso">Meu progresso</button>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="ring-wrap" role="img" aria-label="Progresso até 30 dias">
+              <svg viewBox="0 0 120 120" class="ring" aria-hidden="true">
+                <defs>
+                  <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#9B5CFF"/>
+                    <stop offset="100%" stop-color="#7337CA"/>
+                  </linearGradient>
+                </defs>
+                <circle class="bg" cx="60" cy="60" r="52"/>
+                <circle class="fg" cx="60" cy="60" r="52" id="ring-fg"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-number" id="ring-percent" aria-live="polite">0%</div>
+                <div class="ring-label">até 30 dias</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <div class="card">
+            <h3>Mini metas de hoje</h3>
+            <ul class="todo" id="todo-list">
+              <li><label><input type="checkbox" data-k="agua"> Beber água</label></li>
+              <li><label><input type="checkbox" data-k="respirar"> 2 min. de respiração</label></li>
+              <li><label><input type="checkbox" data-k="movimento"> Caminhar 5 min.</label></li>
+              <li><label><input type="checkbox" data-k="registro"> Registrar como me senti</label></li>
+            </ul>
+          </div>
+
+          <div class="card tips">
+            <h3>Dica rápida</h3>
+            <div class="tip-text" id="tip-text">Pequenos passos contam muito.</div>
+            <div class="tip-actions">
+              <button class="icon-btn" id="tip-prev" aria-label="Dica anterior">‹</button>
+              <button class="icon-btn" id="tip-next" aria-label="Próxima dica">›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMUNIDADE -->
+      <section id="comunidade" aria-labelledby="comunidade-title">
+        <h2 id="comunidade-title">Comunidade</h2>
+        <div style="margin-bottom:16px; background:var(--panel-2); padding:16px; border-radius:12px;">
+          <label for="nick">Seu apelido (opcional)</label>
+          <input id="nick" type="text" inputmode="text" autocomplete="nickname" placeholder="Ex: Solitário Esperançoso" />
+          <label for="postText">Escreva sua mensagem</label>
+          <textarea id="postText" rows="4" maxlength="1000" placeholder="Desabafe aqui... (máx. 1000 caracteres)"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <button id="btnPostar">Postar</button>
+            <small id="contadorChars" aria-live="polite" style="color:var(--muted)">0/1000</small>
+          </div>
+        </div>
+        <h3 style="margin:10px 0;">Feed</h3>
+        <div id="feed" aria-live="polite"></div>
+        <div style="text-align:center; margin-top:12px;">
+          <button id="btnMais" style="display:none;">Carregar mais</button>
+        </div>
+      </section>
+
+      <!-- COMO ME SENTI -->
+      <section id="como-me-senti" aria-labelledby="cms-title">
+        <h2 id="cms-title">Como Me Senti Hoje</h2>
+        <textarea id="sentimento" rows="8" placeholder="Escreva aqui..."></textarea><br />
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnSalvarSentimento">Salvar</button>
+          <button id="btnExportSentimentos">Exportar CSV</button>
+        </div>
+        <h3 style="margin-top:20px;">Histórico</h3>
+        <div id="listaSentimentos"></div>
+      </section>
+
+      <!-- PRECISO CONVERSAR (mock) -->
+      <section id="preciso-conversar" aria-labelledby="pc-title">
+        <h2 id="pc-title">Preciso Conversar</h2>
+        <p>Em breve: conexão com assistente. No momento é um exemplo local.</p>
+        <div id="chat-container" style="display:flex; flex-direction: column; height: 40vh; background: var(--panel-2); border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 10px;"></div>
+        <textarea id="chat-input" rows="3" placeholder="Escreva sua mensagem..."></textarea>
+        <button id="send-chat">Enviar</button>
+      </section>
+
+      <!-- MEU PROGRESSO -->
+      <section id="meu-progresso" aria-labelledby="prog-title">
+        <h2 id="prog-title" class="sr-only">Meu Progresso</h2>
+        <div class="oa-container">
+          <h2>Tempo sem recaída</h2>
+          <div class="oa-slice"><span class="value" id="oa-meses">0</span><span class="label">meses</span></div>
+          <div class="oa-slice"><span class="value" id="oa-dias">0</span><span class="label">dias</span></div>
+          <div class="oa-slice"><span class="value" id="oa-horas">0</span><span class="label">horas</span></div>
+          <div class="oa-slice"><span class="value" id="oa-minutos">0</span><span class="label">minutos</span></div>
+          <div class="oa-slice"><span class="value" id="oa-segundos">0</span><span class="label">segundos</span></div>
+
+          <div class="oa-actions">
+            <button class="oa-btn" id="oa-open" title="Definir data da última recaída">📅 Definir última recaída</button>
+            <button class="oa-btn primary" id="oa-reset" title="Redefinir agora">⟲ Redefinir agora</button>
+            <button class="oa-btn" id="oa-share" title="Copiar resumo">📤 Compartilhar</button>
+            <input type="datetime-local" id="oa-date-input" style="display:none;" />
+          </div>
+
+          <div class="badges" aria-label="Conquistas">
+            <div class="badge" data-th="1">1 dia</div>
+            <div class="badge" data-th="7">7 dias</div>
+            <div class="badge" data-th="30">30 dias</div>
+            <div class="badge" data-th="90">90 dias</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- E-BOOKS -->
+      <section id="ebooks" aria-labelledby="ebooks-title">
+        <h2 id="ebooks-title">E-books</h2>
+        <div class="ebook-item"><h3>Guia para Vencer a Ansiedade</h3><a href="#">Baixar PDF</a></div>
+        <div class="ebook-item"><h3>Manual da Superação de Vícios</h3><a href="#">Ler Online</a></div>
+      </section>
+    </main>
+
+    <footer class="bottom-nav" role="navigation" aria-label="Navegação inferior">
+      <div class="tray">
+        <button class="tab-pill active" data-target="home" id="tab-home" aria-controls="home" aria-label="Início (Home)">🏠<span>Início</span></button>
+        <button class="tab-pill" data-target="comunidade" id="tab-comunidade" aria-controls="comunidade" aria-label="Comunidade">👥<span>Comunidade</span></button>
+        <button class="tab-pill" data-target="preciso-conversar" id="tab-conversar" aria-controls="preciso-conversar" aria-label="Conversar">💬<span>Conversar</span></button>
+        <button class="tab-pill" data-target="meu-progresso" id="tab-progresso" aria-controls="meu-progresso" aria-label="Progresso">📈<span>Progresso</span></button>
+        <button class="tab-pill" data-target="ebooks" id="tab-ebooks" aria-controls="ebooks" aria-label="E-books">📚<span>E-books</span></button>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Navegação + lógica de UI -->
+  <script>
+    (function(){
+      const $ = sel => document.querySelector(sel);
+      const $$ = sel => Array.from(document.querySelectorAll(sel));
+      const LS_DATE_KEY = 'oa-ultima-recaida';
+      const LS_THEME = 'oa-theme';
+      const OFFLINE_POSTS = 'oa-offline-posts';
+      const toast = $('#toast');
+      function showToast(msg, ms=1800){
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(showToast.t); showToast.t = setTimeout(()=>toast.classList.remove('show'), ms);
+      }
+
+      // Tabs + keyboard arrows
+      const tabs = $$('.tab-pill');
+      const sections = $$('main section');
+      function showSection(id){
+        sections.forEach(s=>s.classList.toggle('active', s.id===id));
+        tabs.forEach(t=>t.classList.toggle('active', t.dataset.target===id));
+        window.scrollTo({top:0,behavior:'smooth'});
+        setTimeout(setNavHeightVar, 0);
+      }
+      tabs.forEach(btn=>btn.addEventListener('click',()=>showSection(btn.dataset.target||'home')));
+      window.addEventListener('keydown',(e)=>{
+        if(['ArrowLeft','ArrowRight'].includes(e.key)){
+          const idx = tabs.findIndex(t=>t.classList.contains('active'));
+          const next = e.key==='ArrowRight' ? (idx+1)%tabs.length : (idx-1+tabs.length)%tabs.length;
+          tabs[next].focus(); tabs[next].click();
+        }
+      });
+
+      // Saudação + frase do dia
+      $('#home-saudacao').textContent = ((h)=> h<12? 'Bom dia 👋' : h<18? 'Boa tarde 👋' : 'Boa noite 👋')(new Date().getHours());
+      const FRASES=[
+        'Consistência é mais forte que intensidade.',
+        'Hoje você venceu simplesmente por tentar.',
+        'Um passo de cada vez já é caminho.',
+        'Seu futuro agradece as escolhas de hoje.',
+        'Seja gentil consigo. Isso também é progresso.',
+        'Vontade passa; vitórias ficam.'
+      ];
+      (function fraseDia(){ const seed = new Date().toISOString().slice(0,10).replaceAll('-',''); const idx = Number(seed)%FRASES.length; $('#home-frase').textContent = FRASES[idx]; })();
+
+      // Mini metas persistentes
+      const TODO_KEY='oa-todo-dia';
+      function loadJSON(k, d={}){ try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d} }
+      function saveJSON(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+      ;(function initTodos(){ const st=loadJSON(TODO_KEY); $$('#todo-list input[type="checkbox"]').forEach(cb=>{const k=cb.dataset.k; cb.checked=!!st[k]; cb.addEventListener('change',()=>{const s=loadJSON(TODO_KEY); s[k]=cb.checked; saveJSON(TODO_KEY,s);});}); })();
+
+      // Ring até 30 dias
+      function updateRing(){
+        const raw = localStorage.getItem(LS_DATE_KEY); const inicio = raw? new Date(raw): new Date();
+        const dias = Math.max(0, Math.floor((Date.now()-inicio.getTime())/86400000));
+        $('#home-streak-dias').textContent = dias;
+        const pct = Math.max(0, Math.min(100, Math.round((dias/30)*100)));
+        $('#ring-percent').textContent = pct + '%';
+        const C=327; $('#ring-fg').style.strokeDashoffset = String(C*(1-pct/100));
+        // badges on/off
+        $$('.badge').forEach(b=>{const th=Number(b.dataset.th||0); b.classList.toggle('on', dias>=th);});
+      }
+
+      // Contador principal com tick alinhado ao segundo
+      const mesesEl=$('#oa-meses'), diasEl=$('#oa-dias'), horasEl=$('#oa-horas'), minutosEl=$('#oa-minutos'), segundosEl=$('#oa-segundos');
+      const base1={r:51,g:51,b:51}, base2={r:51,g:51,b:51}, g1={r:155,g:92,b:255}, g2={r:115,g:55,b:202};
+      const toHex=n=>n.toString(16).padStart(2,'0');
+      const hex=({r,g,b})=>`#${toHex(r)}${toHex(g)}${toHex(b)}`;
+      function blend(a,b,t){return{r:Math.round(a.r+(b.r-a.r)*t),g:Math.round(a.g+(b.g-a.g)*t),b:Math.round(a.b+(b.b-a.b)*t)}}
+      function styleSlice(el,p){const s=blend(base1,g1,p), e=blend(base2,g2,p); el.style.background=`linear-gradient(90deg, ${hex(s)}, ${hex(e)})`; el.style.boxShadow=`0 6px 16px rgba(${g2.r},${g2.g},${g2.b},${0.4*p})`; }
+      let ultimaRecaida = localStorage.getItem(LS_DATE_KEY)? new Date(localStorage.getItem(LS_DATE_KEY)) : new Date();
+      function tick(){
+        const diff = Date.now()-ultimaRecaida.getTime();
+        const s = Math.floor(diff/1000)%60, m=Math.floor(diff/60000)%60, h=Math.floor(diff/3600000)%24, d=Math.floor(diff/86400000), mo=Math.floor(d/30);
+        mesesEl.textContent=mo; diasEl.textContent=d%30; horasEl.textContent=h; minutosEl.textContent=m; segundosEl.textContent=s;
+        styleSlice(mesesEl.parentElement, Math.min(mo/12,1));
+        styleSlice(diasEl.parentElement, Math.min((d%30)/29,1));
+        styleSlice(horasEl.parentElement, Math.min(h/23,1));
+        styleSlice(minutosEl.parentElement, Math.min(m/59,1));
+        styleSlice(segundosEl.parentElement, Math.min(s/59,1));
+      }
+      function scheduleNext(){
+        tick(); updateRing();
+        const msToNext = 1000 - (Date.now()%1000); // alinha no segundo
+        setTimeout(scheduleNext, msToNext);
+      }
+      scheduleNext();
+
+      // Definir / Resetar / Compartilhar
+      const inputDate = $('#oa-date-input');
+      $('#oa-open').addEventListener('click', ()=>{
+        const tz = new Date(ultimaRecaida.getTime()- (new Date().getTimezoneOffset()*60000)).toISOString().slice(0,16);
+        inputDate.value = tz; inputDate.showPicker? inputDate.showPicker() : inputDate.click();
+      });
+      inputDate.addEventListener('change',()=>{
+        if(!inputDate.value) return; const picked=new Date(inputDate.value);
+        if(isNaN(+picked)) return showToast('Data inválida');
+        ultimaRecaida = picked; localStorage.setItem(LS_DATE_KEY, picked.toISOString()); tick(); updateRing(); showToast('Última recaída atualizada');
+      });
+      $('#oa-reset').addEventListener('click',()=>{ ultimaRecaida=new Date(); localStorage.setItem(LS_DATE_KEY, ultimaRecaida.toISOString()); tick(); updateRing(); showToast('Contador reiniciado'); });
+      $('#oa-share').addEventListener('click', async ()=>{
+        const msg = `Estou há ${mesesEl.textContent} meses, ${diasEl.textContent} dias, ${horasEl.textContent}h ${minutosEl.textContent}m ${segundosEl.textContent}s firme no Ouvido Anônimo.`;
+        if(navigator.share){ try{ await navigator.share({title:'Meu progresso', text:msg}); return;}catch(e){} }
+        await navigator.clipboard.writeText(msg); showToast('Resumo copiado ✅');
+      });
+
+      // Bottom nav height calc + teclado mobile
+      function setNavHeightVar(){ const nav = document.querySelector('.bottom-nav'); if(!nav) return; const h = Math.max(nav.offsetHeight, 72); document.documentElement.style.setProperty('--nav-h', h+'px'); }
+      window.addEventListener('load', setNavHeightVar, {passive:true});
+      window.addEventListener('resize', setNavHeightVar, {passive:true});
+      tabs.forEach(b=>b.addEventListener('click',()=>setTimeout(setNavHeightVar,0),{passive:true}));
+      if(window.visualViewport){ const onVV=()=>{ const vv=visualViewport; const bottomInset=Math.max(0,(window.innerHeight - vv.height - vv.offsetTop)); document.querySelector('.bottom-nav').style.transform = bottomInset>0?`translateY(-${bottomInset}px)`:'translateY(0)'; }; visualViewport.addEventListener('resize', onVV, {passive:true}); visualViewport.addEventListener('scroll', onVV, {passive:true}); window.addEventListener('orientationchange', onVV, {passive:true}); onVV(); }
+
+      // Chat (mock)
+      const chatC=$('#chat-container'), chatI=$('#chat-input'); $('#send-chat')?.addEventListener('click',()=>{ const t=(chatI.value||'').trim(); if(!t) return; const el=document.createElement('div'); el.style.marginBottom='12px'; el.innerHTML = `<b>Você:</b> ${t}`; chatC.appendChild(el); chatI.value=''; chatC.scrollTo({top:chatC.scrollHeight, behavior:'smooth'}); });
+
+      // Comunidade UI (frontend only; offline queue support)
+      const contadorChars = $('#contadorChars');
+      const postInput = $('#postText');
+      postInput?.addEventListener('input', (e)=>{ const v=e.target.value||''; contadorChars.textContent = `${v.length}/1000`; });
+
+      // Tema
+      const themeToggle = $('#themeToggle');
+      function applyTheme(t){ document.documentElement.dataset.theme=t; themeToggle.setAttribute('aria-pressed', String(t==='light')); }
+      const savedTheme = localStorage.getItem(LS_THEME); if(savedTheme) applyTheme(savedTheme);
+      themeToggle.addEventListener('click',()=>{ const cur = document.documentElement.dataset.theme==='light'?'dark':'light'; applyTheme(cur); localStorage.setItem(LS_THEME, cur); });
+
+      // PWA install prompt
+      let deferredPrompt=null; const installBtn=$('#installBtn');
+      window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; installBtn.hidden=false; });
+      installBtn.addEventListener('click', async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const {outcome}=await deferredPrompt.userChoice; if(outcome==='accepted'){ showToast('Instalação iniciada'); installBtn.hidden=true; } deferredPrompt=null; });
+
+      // Offline/Online events for posts
+      window.addEventListener('offline', () => { showToast('Sem conexão. Mensagens serão salvas.'); });
+      window.addEventListener('online', () => { syncOfflinePosts(); });
+
+      function queueOfflinePost(data){
+        const q = JSON.parse(localStorage.getItem(OFFLINE_POSTS) || '[]'); q.push(data); localStorage.setItem(OFFLINE_POSTS, JSON.stringify(q)); showToast('Mensagem salva offline');
+      }
+
+      async function syncOfflinePosts(){
+        if(!navigator.onLine) return;
+        const list = JSON.parse(localStorage.getItem(OFFLINE_POSTS) || '[]');
+        if(!list.length) return;
+        showToast('Sincronizando mensagens offline...');
+        for(const p of list){ try{ await firebaseAddPost(p); }catch(e){ console.error(e); break; } }
+        localStorage.removeItem(OFFLINE_POSTS); showToast('Mensagens sincronizadas ✅');
+      }
+
+      // Firebase functions stub (will be defined when module loads)
+      let firebaseAddPost = async (data) => {};
+      let firebaseExportSentimentos = async () => {};
+
+      // Event for export sentimentos (will call firebaseExportSentimentos once ready)
+      $('#btnExportSentimentos')?.addEventListener('click', async () => {
+        try{
+          await firebaseExportSentimentos();
+        }catch(e){ showToast('Erro ao exportar'); console.error(e); }
+      });
+
+    })();
+  </script>
+
+  <!-- Firebase + offline posting + export sentimentos -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, where, limit, startAfter, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA_YrmjKTEEA2Sv8OUZw473qYHwSEbwCQU",
+      authDomain: "ouvido-anonimo.firebaseapp.com",
+      databaseURL: "https://ouvido-anonimo-default-rtdb.firebaseio.com",
+      projectId: "ouvido-anonimo",
+      storageBucket: "ouvido-anonimo.firebasestorage.app",
+      messagingSenderId: "53185261926",
+      appId: "1:53185261926:web:16274ebea12bbf576998a7"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    const inputNick = document.getElementById("nick");
+    const inputPost = document.getElementById("postText");
+    const btnPostar = document.getElementById("btnPostar");
+    const feedDiv   = document.getElementById("feed");
+    const btnMais   = document.getElementById("btnMais");
+
+    let ultimoDoc = null, carregandoMais = false, feedIniciado = false, unsubscribeFeed = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) signInAnonymously(auth).catch(console.error);
+      else iniciarFeed();
+    });
+
+    // Expose functions for offline queue
+    window.firebaseAddPost = async function(data){
+      await addDoc(collection(db, "posts"), data);
+    };
+    window.firebaseExportSentimentos = async function(){
+      const user = auth.currentUser || (await signInAnonymously(auth), auth.currentUser);
+      const q = query(collection(db, `users/${user.uid}/sentimentos`), orderBy('criadoEm','asc'));
+      const snap = await getDocs(q);
+      let csv = 'texto,data
+';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const texto = (d.texto || '').replace(/
+/g, ' ').replace(/"/g, '""');
+        const quando = d.criadoEm?.toDate?.() ? d.criadoEm.toDate().toLocaleString() : '';
+        csv += `"${texto}","${quando}"
+`;
+      });
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'sentimentos.csv'; a.style.display='none';
+      document.body.appendChild(a); a.click(); setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 0);
+    };
+
+    function desenharPost(docSnap, insert = "append") {
+      const d = docSnap.data();
+      const quando = d.criadoEm?.toDate?.() ? d.criadoEm.toDate().toLocaleString() : "—";
+      const apelido = d.nick ? d.nick : "Anônimo";
+      const el = document.createElement("div");
+      el.style.borderBottom = "1px solid #2a2a2a";
+      el.style.padding = "8px 0";
+      el.setAttribute("data-id", docSnap.id);
+      el.innerHTML = `<strong>${apelido}:</strong> ${d.texto}<br><span style="color:#bbb">${quando}</span>`;
+      insert === "prepend" ? feedDiv.prepend(el) : feedDiv.appendChild(el);
+    }
+
+    window.iniciarFeed = function iniciarFeed() {
+      if (feedIniciado) return; feedIniciado = true;
+      const qInit = query(collection(db, "posts"), orderBy("criadoEm", "desc"), limit(5));
+      getDocs(qInit).then(snapshot => {
+        feedDiv.innerHTML = "";
+        if (!snapshot.empty) {
+          snapshot.docs.forEach(d => desenharPost(d, "append"));
+          ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
+          btnMais.style.display = snapshot.docs.length === 5 ? "inline-block" : "none";
+        } else {
+          btnMais.style.display = "none";
+          feedDiv.innerHTML = "<p style='color:#bbb'>Nenhuma mensagem ainda. Seja o primeiro a postar!</p>";
+        }
+        const lastTs = snapshot.docs[0]?.data()?.criadoEm || null;
+        const qNew = lastTs ? query(collection(db, "posts"), where("criadoEm", ">", lastTs), orderBy("criadoEm", "desc")) : query(collection(db, "posts"), orderBy("criadoEm", "desc"));
+        unsubscribeFeed = onSnapshot(qNew, (snap) => {
+          const novos = [];
+          snap.docChanges().forEach(ch => {
+            if (ch.type === "added") novos.push(ch.doc);
+            if (ch.type === "removed") { const el = feedDiv.querySelector(`[data-id="${ch.doc.id}"]`); el && el.remove(); }
+          });
+          novos.sort((a,b)=>{ const tA=a.data().criadoEm, tB=b.data().criadoEm; if(!tA||!tB) return 0; return tA.toDate()-tB.toDate(); });
+          novos.forEach(d => desenharPost(d, "prepend"));
+        });
+      }).catch(console.error);
+    }
+
+    if (btnPostar && inputPost && feedDiv) {
+      btnPostar.addEventListener("click", async () => {
+        const texto = (inputPost.value || "").trim();
+        const nick = (inputNick.value || "").trim();
+        if (!texto) return alert("Escreva uma mensagem antes de postar!");
+        if (texto.length > 1000) return alert("Limite de 1000 caracteres.");
+        btnPostar.disabled = true;
+        try {
+          const data = { texto, criadoEm: serverTimestamp(), ...(nick ? { nick } : {}) };
+          if(!navigator.onLine){
+            // offline: queue to localStorage
+            queueOfflinePost(data);
+          } else {
+            const user = auth.currentUser || (await signInAnonymously(auth), auth.currentUser);
+            await addDoc(collection(db, "posts"), data);
+          }
+          inputPost.value = ""; document.getElementById('contadorChars').textContent = '0/1000';
+          feedDiv?.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (e) {
+          console.error(e);
+          alert("Erro ao postar: " + e.message);
+        } finally {
+          btnPostar.disabled = false;
+        }
+      });
+
+      btnMais.addEventListener("click", async () => {
+        if (!ultimoDoc || carregandoMais) return; carregandoMais = true; btnMais.disabled = true;
+        try {
+          const qMore = query(collection(db, "posts"), orderBy("criadoEm", "desc"), startAfter(ultimoDoc), limit(5));
+          const snap = await getDocs(qMore);
+          if (!snap.empty) {
+            snap.docs.forEach(d => desenharPost(d, "append"));
+            ultimoDoc = snap.docs[snap.docs.length - 1];
+            btnMais.style.display = snap.docs.length < 5 ? "none" : "inline-block";
+            btnMais.disabled = snap.docs.length < 5;
+          } else {
+            btnMais.style.display = "none";
+          }
+        } catch (e) {
+          console.error(e); alert("Erro ao carregar mais posts: " + e.message);
+        } finally { carregandoMais = false; btnMais.disabled = false; }
+      });
+    }
+
+    // Sentimentos (tempo real) + export
+    const textarea = document.getElementById("sentimento");
+    const btnSalvar = document.getElementById("btnSalvarSentimento");
+    const lista = document.getElementById("listaSentimentos");
+
+    if (btnSalvar && textarea && lista) {
+      btnSalvar.addEventListener("click", async () => {
+        const texto = (textarea.value || "").trim();
+        if (!texto) { alert("Escreva algo antes de salvar!"); return; }
+        btnSalvar.disabled = true;
+        try {
+          const user = auth.currentUser || (await signInAnonymously(auth), auth.currentUser);
+          await addDoc(collection(db, `users/${user.uid}/sentimentos`), { texto, criadoEm: serverTimestamp() });
+          textarea.value = "";
+        } catch (e) {
+          console.error(e); alert("Erro ao salvar: " + e.message);
+        } finally {
+          btnSalvar.disabled = false;
+        }
+      });
+
+      const startRT = () => {
+        const user = auth.currentUser;
+        if (!user) return;
+        const q = query(collection(db, `users/${user.uid}/sentimentos`), orderBy("criadoEm", "desc"));
+        onSnapshot(q, (snap) => {
+          lista.innerHTML = "";
+          snap.forEach(doc => {
+            const d = doc.data();
+            const quando = d.criadoEm?.toDate?.() ? d.criadoEm.toDate().toLocaleString() : "—";
+            const el = document.createElement("div");
+            el.style.borderBottom = "1px solid #2a2a2a";
+            el.style.padding = "8px 0";
+            el.innerHTML = `<strong>Sentimento:</strong> ${d.texto}<br><span style="color:#bbb">${quando}</span>`;
+            lista.appendChild(el);
+          });
+        });
+      };
+      if (auth.currentUser) startRT();
+      onAuthStateChanged(auth, () => startRT());
+    }
+  </script>
+
+  <!-- PWA: service worker + atualização -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          if (!reg) return; reg.onupdatefound = () => {
+            const installing = reg.installing; if (!installing) return;
+            installing.onstatechange = () => { if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+              const t = document.getElementById('toast'); t.textContent = 'Atualização disponível — recarregue'; t.classList.add('show');
+            }};
+          };
+        }).catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>
